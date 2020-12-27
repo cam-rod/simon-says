@@ -14,9 +14,28 @@
 * You should have received a copy of the GNU General Public License
 * along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 
-module simon_says(input [9:0] SW, input [3:0] KEY  output [9:0] LEDR);
-	assign LEDR[5] = SW[5];
+// Initial version uses SW and LEDR [3:0]
+module simon_says(input [9:0] SW, input [3:0] KEY, input CLOCK_50, output [9:0] LEDR);
 	assign reset = ~KEY[0];
+	wire [31:0] seed;
+	wire [2:0] segment [31:0];
+	wire [1:0] new_colour;
+	
+	wire start, load_colour, load_speed; // FSM commands
+	wire [4:0] round;
+	wire [2:0] speed;
+	wire result, empty, pulse; // FSM inputs
+
+	// Setup each round
+	reg8_32 seedgen(.clk(CLOCK_50), .reset(reset), .seed(seed));
+	rng rand(.clk(CLOCK_50), .reset(reset), .loadseed_i(start), seed_i(seed), number_o());
+	segments_array set(.new_colour({1'b0, new_colour}), .reset(reset), .clk(CLOCK_50), .load_colour(load_colour), .segment(segment));
+
+	// Operational modules: timer controlled by parameter (max speed 125ms/colour, 16Hz signals)
+	variable_timer flash_clock(.clk(CLOCK_50), .reset(reset), .load_speed(load_speed), .speed(speed), .pulse(pulse));
+
+	// Gameplay modules
+	verify_input check(.segment(segment), .player_input(SW[3:0]), .round(round), .result(result), .empty(empty));
 endmodule
 
 // Outputs 32-bit seed based on clock; ex 2->8 would be ABBAABBA
@@ -57,4 +76,47 @@ module segments_array(input [2:0] new_colour, input reset, clk, load_colour, out
 		else
 			segment <= segment;
 	end
+endmodule
+
+module variable_timer(input clk, reset, load_speed, input [2:0] speed, output pulse);
+	reg [25:0] counter;
+	
+	always@(posedge clk)
+	begin
+		if(reset)
+		begin
+			counter <= 26'd49_999_999;
+			speed <= 3'b00;
+		end
+		else if(load_speed | pulse)
+			case (speed)
+				3'b000: counter <= 26'd49_999_999 // 1Hz
+				3'b001: counter <= 26'd24_999_999 // 2Hz
+				3'b010: counter <= 26'd12_499_999 // 4Hz
+				3'b011: counter <= 26'd6_249_999 // 8Hz
+				3'b100: counter <= 26'd3_124_999 // 16Hz
+				default: counter <= 26'd1;
+			endcase
+		else
+			counter <= counter - 26'b1
+	end
+
+	assign pulse = (counter == 26'b0);
+endmodule
+
+// Confirms whether the segment selected is accurate, or informs if current segment is empty
+module verify_input(input [2:0] segment [31:0], input [3:0] player_input, input round, output result, empty);
+	reg [2:0] play;
+
+	always@* // Encoding play
+		case (player_input)
+			4'b1000: play <= 3'b011;
+			4'b0100: play <= 3'b010;
+			4'b0010: play <= 3'b001;
+			4'b0001: play <= 3'b000;
+			default: play <= 3'b100;
+		endcase
+
+	assign empty = segment[round][2];
+	assign result = (segment[round] == player_input);
 endmodule

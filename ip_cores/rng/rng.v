@@ -59,12 +59,12 @@
 
 `timescale 10ns/1ns
 
-module rng(clk,reset,loadseed_i,seed_i,number_o);
+module rng(clk,reset,loadseed_i,seed_i,number_out);
 input clk;
 input reset;
 input loadseed_i;
 input [31:0] seed_i;
-output [31:0] number_o;
+output [1:0] number_out;
 
 reg [31:0] number_o;
 
@@ -272,4 +272,5 @@ always @(posedge clk or negedge reset)
 
    end
 
+   assign number_out = number_o[1:0];
 endmodule

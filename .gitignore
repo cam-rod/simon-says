@@ -1,0 +1,4 @@
+# Project files
+.db/
+# Cache files
+**/*-cache.lib

@@ -1,4 +1,6 @@
-# Project files
+# Project directoriers and files
 .db/
+work/
+vsim.wlf
 # Cache files
 **/*-cache.lib

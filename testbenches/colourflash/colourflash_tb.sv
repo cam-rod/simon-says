@@ -1,4 +1,4 @@
-/* Testbench for input verification
+/* Testbench for display module
  * Copyright (C) 2020 Cameron Rodriguez
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -16,33 +16,9 @@
 
 `timescale 10ns/1ns
 
-`include "../../verify_input.sv"
+`include "../../colourflash.sv"
 `include "../../fsm_interface.sv"
 
-module verify_input_tb;
-    logic [31:0][2:0] segment;
-    logic [3:0] player_input;
-    fsm_sig sigs();
+module colourflash_tb;
 
-    int i;
-    logic [3:0] inputs [10:0];
-
-    verify_input u1(.segment(segment), .player_input(player_input), .sigs);
-    
-    initial
-    begin
-        $readmemb("testbenches/verify_input/segment_src.txt", inputs);
-
-        for(i=0;i<32;i=i+1)
-            segment[i] = inputs[i%5][2:0];
-    end
-
-    always
-        for(i = 5; i < 11; i=i+1) // Check for outputs on each round
-        begin
-            player_input = inputs[i];
-            sigs.check_round = i-5;
-
-            #1;
-        end
 endmodule

@@ -1,18 +1,18 @@
 /* Main module of Simon Says program
-* Copyright (C) 2020 Cameron Rodriguez
-* 
-* This program is free software: you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation, either version 3 of the License, or
-* (at your option) any later version.
-* 
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU General Public License for more details.
-* 
-* You should have received a copy of the GNU General Public License
-* along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+ * Copyright (C) 2020 Cameron Rodriguez
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 
 // Initial version uses SW and LEDR [3:0]
 
@@ -32,6 +32,11 @@ interface fsm_sig;
 	modport check (input check_round, output result, empty);
 endinterface
 
+`include "colourflash.sv"
+`include "verify_input.sv"
+`include "ip_cores/rng/rng.sv"
+`include "fsm_interface.sv"
+
 module simon_says(input [9:0] SW, input [3:0] KEY, input CLOCK_50, output [9:0] LEDR);
 	assign reset = ~KEY[0];
 	logic [31:0] seed;
@@ -48,7 +53,7 @@ module simon_says(input [9:0] SW, input [3:0] KEY, input CLOCK_50, output [9:0] 
 
 	// Operational modules: timer controlled by parameter (max speed 125ms/colour, 16Hz signals), module to flash colours for user
 	variable_timer flasher(.clk(CLOCK_50), .reset, .sigs);
-	// Colour flasher goes HERE
+	colourflash displays(.sigs, .reset, .player_input(SW[3:0]), .segment, .disp(LEDR[3:0]));
 
 	// Gameplay modules
 	verify_input check(.segment, .player_input(SW[3:0]), .sigs);

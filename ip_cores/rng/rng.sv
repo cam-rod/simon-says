@@ -59,7 +59,7 @@
 
 `timescale 10ns/1ns
 
-module rng(clk,reset,seed_i,fsm_sig.rand sigs,number_out);
+module rng(clk,reset,seed_i,fsm_sig.rng_in sigs,number_out);
 input clk;
 input reset;
 input [31:0] seed_i;

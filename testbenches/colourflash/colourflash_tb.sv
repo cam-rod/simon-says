@@ -20,5 +20,5 @@
 `include "../../fsm_interface.sv"
 
 module colourflash_tb;
-
+    // Reset, flash for a set of given rounds, then pair with player inputs
 endmodule

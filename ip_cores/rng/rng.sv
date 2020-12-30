@@ -59,10 +59,9 @@
 
 `timescale 10ns/1ns
 
-module rng(clk,reset,loadseed_i,seed_i,number_out);
+module rng(clk,reset,seed_i,fsm_sig.rand sigs,number_out);
 input clk;
 input reset;
-input loadseed_i;
 input [31:0] seed_i;
 output [1:0] number_out;
 
@@ -93,7 +92,7 @@ always @(posedge clk or negedge reset)
 
       begin
 
-      if (loadseed_i )
+      if (sigs.loadseed_i )
 
          begin
 
@@ -177,7 +176,7 @@ always @(posedge clk or negedge reset)
 
       begin
 
-      if (loadseed_i )
+      if (sigs.loadseed_i )
 
          begin
 

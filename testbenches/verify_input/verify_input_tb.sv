@@ -1,7 +1,7 @@
 `timescale 10ns/1ns
 
 module verify_input_tb;
-    reg [2:0] segment [31:0];
+    reg [31:0][2:0] segment;
     reg [3:0] player_input;
     reg [4:0] round;
     wire result, empty;

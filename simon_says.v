@@ -19,30 +19,31 @@ module simon_says(input [9:0] SW, input [3:0] KEY, input CLOCK_50, output [9:0] 
 	assign reset = ~KEY[0];
 	wire [31:0] seed;
 	wire [2:0] segment [31:0];
+	wire [5:0] current_round;
 	wire [1:0] new_colour;
-	
-	wire start, load_colour, load_speed; // FSM commands
-	wire [4:0] round;
+
+	wire start, load_colour, load_speed, rst_seedgen, player_turn, flash_colour; // FSM commands
+	wire [4:0] check_round;
 	wire [2:0] speed;
 	wire result, empty, pulse; // FSM inputs
 
 	// Setup each round
-	reg8_32 seedgen(.clk(CLOCK_50), .reset(reset), .seed(seed));
-	rng rand(.clk(CLOCK_50), .reset(reset), .loadseed_i(start), seed_i(seed), number_o());
+	reg8_32 seedgen(.clk(CLOCK_50), .reset(reset), .rst_seedgen(rst_seedgen), .seed(seed));
+	rng rand(.clk(CLOCK_50), .reset(reset), .loadseed_i(start), seed_i(seed), number_o(new_colour));
 	segments_array set(.new_colour({1'b0, new_colour}), .reset(reset), .clk(CLOCK_50), .load_colour(load_colour), .segment(segment));
 
-	// Operational modules: timer controlled by parameter (max speed 125ms/colour, 16Hz signals)
-	variable_timer flash_clock(.clk(CLOCK_50), .reset(reset), .load_speed(load_speed), .speed(speed), .pulse(pulse));
+	// Operational modules: timer controlled by parameter (max speed 125ms/colour, 16Hz signals), module to flash colours for user
+	variable_timer flasher(.clk(CLOCK_50), .reset(reset), .load_speed(load_speed), .speed(speed), .pulse(pulse));
 
 	// Gameplay modules
-	verify_input check(.segment(segment), .player_input(SW[3:0]), .round(round), .result(result), .empty(empty));
+	verify_input check(.segment(segment), .player_input(SW[3:0]), .check_round(check_round), .result(result), .empty(empty));
 endmodule
 
 // Outputs 32-bit seed based on clock; ex 2->8 would be ABBAABBA
-module reg8_32(input clk, reset, output reg [31:0] seed);
+module reg8_32(input clk, reset, rst_seedgen, output reg [31:0] seed);
 	// Increment 8 bit loop counter
 	always@(posedge clk)
-		if(!reset)
+		if(reset | rst_seedgen)
 			seed <= 32'b0;
 		else
 			seed[7:0] <= (&seed[7:0]) ? 8'b0 : seed[7:0] + 8'b1;
@@ -104,19 +105,21 @@ module variable_timer(input clk, reset, load_speed, input [2:0] speed, output pu
 	assign pulse = (counter == 26'b0);
 endmodule
 
-// Confirms whether the segment selected is accurate, or informs if current segment is empty
-module verify_input(input [2:0] segment [31:0], input [3:0] player_input, input round, output result, empty);
-	reg [2:0] play;
-
-	always@* // Encoding play
-		case (player_input)
-			4'b1000: play <= 3'b011;
-			4'b0100: play <= 3'b010;
-			4'b0010: play <= 3'b001;
-			4'b0001: play <= 3'b000;
-			default: play <= 3'b100;
-		endcase
-
-	assign empty = segment[round][2];
-	assign result = (segment[round] == player_input);
+// Flashes colours, based on display, and also shows currently selected option
+module colourflash(input flash_clk, reset input [3:0] player_input, input [4:0] check_round, input [2:0] segment [31:0], output reg [3:0] disp);
+	always@(posedge flash_clk) // Toggle light
+		if(flash_clk)
+			casex (segment[check_round])
+				3'b000: disp[0] <= 1'b1;
+				3'b001: disp[1] <= 1'b1;
+				3'b010: disp[2] <= 1'b1;
+				3'b011: disp[3] <= 1'b1;
+				default: disp <= disp;
+			endcase
+	
+	always@* // Display player input, not clearing any flashed info
+		if(reset)
+			disp <= 4'b0;
+		else
+			disp <= player_input | disp;
 endmodule

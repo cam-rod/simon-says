@@ -1,6 +1,6 @@
 // Confirms whether the segment selected is accurate, or informs if current segment is empty
 module verify_input(input [31:0][2:0] segment, input [3:0] player_input, fsm_sig.check sigs);
-	reg [2:0] play;
+	logic [2:0] play;
 
 	always@* // Encoding play
 		case (player_input)

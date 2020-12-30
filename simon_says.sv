@@ -57,35 +57,28 @@ endmodule
 // Outputs 32-bit seed based on clock; ex 2->8 would be ABBAABBA
 module reg8_32(input clk, reset, fsm_sig.reg8 sigs, output reg [31:0] seed);
 	// Increment 8 bit loop counter
-	always@(posedge clk)
+	always_ff @(posedge clk)
 		if(reset | sigs.rst_seedgen)
-			seed <= 32'b0;
+			seed <= '0;
 		else
 			seed[7:0] <= (&seed[7:0]) ? 8'b0 : seed[7:0] + 8'b1;
 
 	// Contstruct remainder of 32-bits
-	always@*
-		seed[23:16] <= seed[7:0];
-		for (i = 0; i<8; i++) begin
-			seed[8+i] <= seed[7-i];
-			seed[24+i] <= seed[7-i];
-		end
+	assign seed = {<<{seed[7:0]},>>{seed[7:0]},<<{seed[7:0]},>>{seed[7:0]}};
 endmodule
 
 // Stores up to 32 previous colours, with logic "1" msb for unassigned position
 module segments_array(input [2:0] new_colour, input reset, clk, fsm_sig.segments sigs, output reg [31:0][2:0] segment);
-	always@(posedge clk)
+	always_ff @(posedge clk)
 	begin
 		if(reset) // All segments are unassigned
-			for(i=0;i<32;i+1)
+			for(int i=0;i<32;i+1)
 			begin
-				segment[i][2] <= 1'b1;
-				segment[i][1] <= 1'b0;
-				segment[i][0] <= 1'b0;
+				segment[i] <= 3'b100;
 			end
 		else if(sigs.load_colour)
 		begin
-			for(i=0;i<31;i+1)
+			for(int i=0;i<31;i+1)
 				segment[i+1] <= segment[i];
 			segment[0] <= new_colour;
 		end
@@ -95,14 +88,14 @@ module segments_array(input [2:0] new_colour, input reset, clk, fsm_sig.segments
 endmodule
 
 module variable_timer(input clk, reset, fsm_sig.flasher sigs);
-	reg [25:0] counter;
+	logic [25:0] counter;
 	
-	always@(posedge clk)
+	always_ff @(posedge clk)
 	begin
 		if(reset)
 		begin
 			counter <= 26'd49_999_999;
-			sigs.speed <= 3'b00;
+			sigs.speed <= '0;
 		end
 		else if(sigs.load_speed | sigs.pulse)
 			case (sigs.speed)

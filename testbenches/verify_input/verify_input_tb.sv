@@ -6,7 +6,7 @@ module verify_input_tb;
     reg [4:0] round;
     wire result, empty;
 
-    integer i;
+    int i;
     reg [3:0] inputs [10:0];
 
     verify_input u1(.segment(segment), .player_input(player_input), .check_round(round), .result(result), .empty(empty));

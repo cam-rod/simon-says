@@ -20,5 +20,35 @@
 `include "../../fsm_interface.sv"
 
 module colourflash_tb;
+    logic reset;
+    logic [3:0] player_input, disp;
+    logic [31:0][2:0] segment;
+    fsm_sig sigs();
+
+    // Text file parsers
+    int i;
+    logic [10:0][3:0] inputs;    
+
+    colourflash dut(.*);
+
+    always // Clock
+    begin
+        sigs.flash_clk = 1'b0;
+        #1;
+        sigs.flash_clk = 1'b1;
+        #1;
+    end
+
+    initial // Load segments and reset all inputs
+    begin
+        $readmemb("testbenches/colourflash/inputs.txt", inputs);
+        for(i=0;i<32;i=i+1)
+            segment[i] = inputs[i%5][2:0]; 
+        sigs.check_round = '0;
+
+        reset = 1'b1;
+        #1.5;
+        reset = 1'b0;
+    end
     // Reset, flash for a set of given rounds, then pair with player inputs
 endmodule

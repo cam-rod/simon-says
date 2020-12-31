@@ -24,6 +24,7 @@ module verify_input_tb;
     logic [3:0] player_input;
     fsm_sig sigs();
 
+    // Text file 
     int i;
     logic [3:0] inputs [10:0];
 

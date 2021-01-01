@@ -58,26 +58,6 @@ module simon_says(input [9:0] SW, input [3:0] KEY, input CLOCK_50, output [9:0] 
 	verify_input check(.segment, .player_input(SW[3:0]), .sigs);
 endmodule
 
-// Stores up to 32 previous colours, with logic "1" msb for unassigned position
-module segments_array(input [2:0] new_colour, input reset, clk, fsm_sig.segments sigs, output reg [31:0][2:0] segment);
-	always_ff @(posedge clk)
-	begin
-		if(reset) // All segments are unassigned
-			for(int i=0;i<32;i+1)
-			begin
-				segment[i] <= 3'b100;
-			end
-		else if(sigs.load_colour)
-		begin
-			for(int i=0;i<31;i+1)
-				segment[i+1] <= segment[i];
-			segment[0] <= new_colour;
-		end
-		else
-			segment <= segment;
-	end
-endmodule
-
 module variable_timer(input clk, reset, fsm_sig.flash_timer sigs);
 	logic [25:0] counter;
 	

@@ -1,5 +1,5 @@
 /* Testbench for display module
- * Copyright (C) 2020 Cameron Rodriguez
+ * Copyright (C) 2020, 2021 Cameron Rodriguez
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,13 +21,13 @@
 
 module colourflash_tb;
     logic reset;
-    logic [3:0] player_input, disp;
+    logic [3:0] player_input, disp_o;
     logic [31:0][2:0] segment;
     fsm_sig sigs();
 
     // Text file parsers
-    int i;
-    logic [10:0][3:0] inputs;    
+    int i, j;
+    logic [3:0] inputs [10:0];    
 
     colourflash dut(.*);
 
@@ -45,10 +45,30 @@ module colourflash_tb;
         for(i=0;i<32;i=i+1)
             segment[i] = inputs[i%5][2:0]; 
         sigs.check_round = '0;
+        player_input = '0;
 
         reset = 1'b1;
         #1.5;
         reset = 1'b0;
     end
-    // Reset, flash for a set of given rounds, then pair with player inputs
+    // Flash for a set of given rounds, then pair with player inputs
+    always // Independent inputs
+    begin
+        #2;
+        for (i = 0; i<15; i++) // 5 cycles independently, 5 cycles with other inputs
+        begin
+            sigs.check_round <=sigs.check_round + 1'b1;
+            #2;
+        end
+    end
+
+    always // User inputs
+    begin
+        #14; // Change partway through cycles
+        for(j = 0; j < 5; j++)
+        begin
+            player_input = inputs[6+j];
+            #2;
+        end
+    end
 endmodule

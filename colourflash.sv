@@ -1,5 +1,5 @@
 /* Module flashes colours and displays user input
- * Copyright (C) 2020 Cameron Rodriguez
+ * Copyright (C) 2020, 2021 Cameron Rodriguez
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,19 +17,20 @@
 `include "fsm_interface.sv"
 
 // Flashes colours, based on display, and also shows currently selected option
-module colourflash(fsm_sig.led sigs, input reset, input [3:0] player_input, input [31:0][2:0] segment, output [3:0] disp);
-	always_ff @(posedge sigs.flash_clk) // Toggle light
+module colourflash(fsm_sig.led sigs, input reset, input [3:0] player_input, input [31:0][2:0] segment, output logic [3:0] disp_o);
+	logic [3:0] disp_ff; // Used for procedural logic
+    always_ff @(posedge sigs.flash_clk) // Toggle light
         case (segment[sigs.check_round])
-            3'b000: disp[0] <= 1'b1;
-            3'b001: disp[1] <= 1'b1;
-            3'b010: disp[2] <= 1'b1;
-            3'b011: disp[3] <= 1'b1;
-            default: disp <= disp;
+            3'b000: disp_ff <= 4'b0001;
+            3'b001: disp_ff <= 4'b0010;
+            3'b010: disp_ff <= 4'b0100;
+            3'b011: disp_ff <= 4'b1000;
+            default: disp_ff <= '0;
         endcase
 	
 	always_comb // Display player input, not clearing any flashed info
 		if(reset)
-			disp <= '0;
+			disp_o <= '0;
 		else
-			disp <= player_input | disp;
+			disp_o <= player_input | disp_ff;
 endmodule

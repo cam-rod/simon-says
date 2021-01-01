@@ -1,5 +1,5 @@
-/* Testbench for input verification
- * Copyright (C) 2020, 2021 Cameron Rodriguez
+/* Seed generation module
+ * Copyright (C) 2021 Cameron Rodriguez
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,34 +16,43 @@
 
 `timescale 10ns/1ns
 
-`include "../../verify_input.sv"
-`include "../../fsm_interface.sv"
+`include "fsm_interface.sv"
+`include "../../reg8_32.sv"
 
-module verify_input_tb;
-    logic [31:0][2:0] segment;
-    logic [3:0] player_input;
+module reg8_32_tb;
+    logic clk, reset;
     fsm_sig sigs();
+    logic [31:0] seed;
 
-    // Text file 
-    int i;
-    logic [3:0] inputs [10:0];
-
-    verify_input u1(.segment(segment), .player_input(player_input), .sigs);
-    
+    reg8_32 dut (.*);
     initial
     begin
-        $readmemb("testbenches/verify_input/segment_src.txt", inputs);
-
-        for(i=0;i<32;i=i+1)
-            segment[i] = inputs[i%5][2:0];
+        reset = '1;
+        clk = '0;
+        sigs.rst_seedgen = '0;
+        #1.5;
+        reset = '0;
     end
 
-    always
-        for(i = 5; i < 11; i=i+1) // Check for outputs on each round
+    always // Clock cycles
+        forever
         begin
-            player_input = inputs[i];
-            sigs.check_round = i-5;
-
             #1;
+            clk = ~clk;
         end
+
+    always // Reset seed
+    begin
+        #22; 
+        sigs.rst_seedgen = '1;
+        #1.5;
+        sigs.rst_seedgen = '0;
+    end
+
+    always // Test seed rollover
+    begin
+        #26;
+        dut.seed_basis = '1;
+    end
+
 endmodule

@@ -1,5 +1,5 @@
-/* Module to verify inputs
- * Copyright (C) 2020, 2021 Cameron Rodriguez
+/* Seed generation module
+ * Copyright (C) 2021 Cameron Rodriguez
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,19 +16,16 @@
 
 `include "fsm_interface.sv"
 
-// Confirms whether the segment selected is accurate, or informs if current segment is empty
-module verify_input(input [31:0][2:0] segment, input [3:0] player_input, fsm_sig.check sigs);
-	logic [2:0] play;
+// Outputs 32-bit seed based on clock; ex 2->8 would be ABBAABBA
+module reg8_32(input clk, reset, fsm_sig.reg8 sigs, output reg [31:0] seed);
+	logic [7:0] seed_basis;
+    // Increment 8 bit loop counter
+	always_ff @(posedge clk)
+		if(reset | sigs.rst_seedgen)
+			seed_basis <= '0;
+		else
+			seed_basis[7:0] <= (&seed_basis[7:0]) ? 8'b0 : seed_basis[7:0] + 8'b1;
 
-	always@* // Encoding play
-		case (player_input)
-			4'b1000: play <= 3'b011;
-			4'b0100: play <= 3'b010;
-			4'b0010: play <= 3'b001;
-			4'b0001: play <= 3'b000;
-			default: play <= 3'b100;
-		endcase
-
-	assign sigs.empty = segment[sigs.check_round][2];
-	assign sigs.result = segment[sigs.check_round] == play;
+	// Contstruct remainder of 32-bits
+	assign seed = {{<<{seed_basis[7:0]}},{>>{seed_basis[7:0]}},{<<{seed_basis[7:0]}},{>>{seed_basis[7:0]}}};
 endmodule

@@ -1,5 +1,5 @@
 /* Interface for FSM signals
- * Copyright (C) 2020 Cameron Rodriguez
+ * Copyright (C) 2020, 2021 Cameron Rodriguez
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,18 +19,18 @@
 `define _fsm_interface_sv
 
 interface fsm_sig;
-	logic start, load_colour, load_speed, rst_seedgen, player_turn, flash_colour; // FSM commands
+	logic start, load_colour, load_speed, rst_seedgen, player_turn, flash_clk; // FSM commands
 	logic [4:0] check_round;
 	logic [2:0] speed;
 	logic result, empty, pulse; // FSM inputs
 
 	modport fsm (input result, empty, pulse, output start, load_colour, load_speed, rst_seedgen, player_turn,
-				 flash_colour, check_round, speed);
+				 flash_clk, check_round, speed);
 	modport reg8 (input rst_seedgen);
 	modport rng_in (input start);
 	modport segments (input load_colour);
 	modport flasher (input load_speed, speed, output pulse);
-	modport led (input check_round, flash_colour);
+	modport led (input check_round, flash_clk);
 	modport check (input check_round, output result, empty);
 endinterface
 

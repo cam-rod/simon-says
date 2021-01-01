@@ -1,5 +1,5 @@
 /* Main module of Simon Says program
- * Copyright (C) 2020 Cameron Rodriguez
+ * Copyright (C) 2020, 2021 Cameron Rodriguez
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,8 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 
-// Initial version uses SW and LEDR [3:0]
-
+// Initial version uses SW and LEDR [3:0
 interface fsm_sig;
 	logic start, load_colour, load_speed, rst_seedgen, player_turn, flash_colour; // FSM commands
 	logic [4:0] check_round;
@@ -27,7 +26,7 @@ interface fsm_sig;
 	modport reg8 (input rst_seedgen);
 	modport rand (input start);
 	modport segments (input load_colour)
-	modport flasher (input load_speed, speed, output pulse);
+	modport flash_timer (input load_speed, speed, output pulse);
 	modport led (input check_round, flash_colour);
 	modport check (input check_round, output result, empty);
 endinterface
@@ -52,24 +51,11 @@ module simon_says(input [9:0] SW, input [3:0] KEY, input CLOCK_50, output [9:0] 
 	segments_array set(.new_colour({1'b0, new_colour}), .reset, .clk(CLOCK_50), .sigs, .segment);
 
 	// Operational modules: timer controlled by parameter (max speed 125ms/colour, 16Hz signals), module to flash colours for user
-	variable_timer flasher(.clk(CLOCK_50), .reset, .sigs);
-	colourflash displays(.sigs, .reset, .player_input(SW[3:0]), .segment, .disp(LEDR[3:0]));
+	variable_timer flash_timer(.clk(CLOCK_50), .reset, .sigs);
+	colourflash displays(.sigs, .reset, .player_input(SW[3:0]), .segment, .disp_o(LEDR[3:0]));
 
 	// Gameplay modules
 	verify_input check(.segment, .player_input(SW[3:0]), .sigs);
-endmodule
-
-// Outputs 32-bit seed based on clock; ex 2->8 would be ABBAABBA
-module reg8_32(input clk, reset, fsm_sig.reg8 sigs, output reg [31:0] seed);
-	// Increment 8 bit loop counter
-	always_ff @(posedge clk)
-		if(reset | sigs.rst_seedgen)
-			seed <= '0;
-		else
-			seed[7:0] <= (&seed[7:0]) ? 8'b0 : seed[7:0] + 8'b1;
-
-	// Contstruct remainder of 32-bits
-	assign seed = {<<{seed[7:0]},>>{seed[7:0]},<<{seed[7:0]},>>{seed[7:0]}};
 endmodule
 
 // Stores up to 32 previous colours, with logic "1" msb for unassigned position
@@ -92,7 +78,7 @@ module segments_array(input [2:0] new_colour, input reset, clk, fsm_sig.segments
 	end
 endmodule
 
-module variable_timer(input clk, reset, fsm_sig.flasher sigs);
+module variable_timer(input clk, reset, fsm_sig.flash_timer sigs);
 	logic [25:0] counter;
 	
 	always_ff @(posedge clk)

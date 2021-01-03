@@ -20,7 +20,7 @@
 `include "../../fsm_interface.sv"
 
 module verify_input_tb;
-    logic [31:0][2:0] segment;
+    logic [32:0][1:0] segment;
     logic [3:0] player_input;
     fsm_sig sigs();
 
@@ -34,12 +34,12 @@ module verify_input_tb;
     begin
         $readmemb("testbenches/verify_input/segment_src.txt", inputs);
 
-        for(i=0;i<32;i=i+1)
-            segment[i] = inputs[i%5][2:0];
+        for(i=;i<33;i=i+1)
+            segment[i] = inputs[i%5][1:0];
     end
 
     always
-        for(i = 5; i < 11; i=i+1) // Check for outputs on each round
+        for(i = 5; i < 11; i++) // Check for outputs on each round
         begin
             player_input = inputs[i];
             sigs.check_round = i-5;

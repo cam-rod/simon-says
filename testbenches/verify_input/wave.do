@@ -8,6 +8,5 @@ log {/*}
 add wave player_input
 add wave sigs.check_round
 add wave sigs.result
-add wave sigs.empty
 
 run 80ns

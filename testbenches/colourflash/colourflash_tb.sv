@@ -22,7 +22,7 @@
 module colourflash_tb;
     logic reset;
     logic [3:0] player_input, disp_o;
-    logic [31:0][2:0] segment;
+    logic [32:0][1:0] segment;
     fsm_sig sigs();
 
     // Text file parsers
@@ -42,8 +42,8 @@ module colourflash_tb;
     initial // Load segments and reset all inputs
     begin
         $readmemb("testbenches/colourflash/inputs.txt", inputs);
-        for(i=0;i<32;i=i+1)
-            segment[i] = inputs[i%5][2:0]; 
+        for(i=0;i<33;i=i+1)
+            segment[i] = inputs[i%5][1:0]; 
         sigs.check_round = '0;
         player_input = '0;
 

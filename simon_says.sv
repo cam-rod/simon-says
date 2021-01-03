@@ -14,25 +14,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 
-// Initial version uses SW and LEDR [3:0
-interface fsm_sig;
-	logic start, load_colour, load_speed, rst_seedgen, player_turn, flash_colour; // FSM commands
-	logic [4:0] check_round;
-	logic [2:0] speed;
-	logic result, empty, pulse; // FSM inputs
+// Initial version uses SW and LEDR [3:0]
 
-	modport fsm (input result, empty, pulse, output start, load_colour, load_speed, rst_seedgen, player_turn,
-				 flash_colour, check_round, speed);
-	modport reg8 (input rst_seedgen);
-	modport rand (input start);
-	modport segments (input load_colour)
-	modport flash_timer (input load_speed, speed, output pulse);
-	modport led (input check_round, flash_colour);
-	modport check (input check_round, output result, empty);
-endinterface
-
+`include "fsm.sv"
 `include "colourflash.sv"
 `include "verify_input.sv"
+`include "segments_array.sv"
+`include "reg8_32.sv"
 `include "ip_cores/rng/rng.sv"
 `include "fsm_interface.sv"
 
@@ -54,7 +42,8 @@ module simon_says(input [9:0] SW, input [3:0] KEY, input CLOCK_50, output [9:0] 
 	variable_timer flash_timer(.clk(CLOCK_50), .reset, .sigs);
 	colourflash displays(.sigs, .reset, .player_input(SW[3:0]), .segment, .disp_o(LEDR[3:0]));
 
-	// Gameplay modules
+	// Gameplay modules, FSM
+	fsm controller(.sigs, .reset, .clk(CLOCK_50), .current_round);
 	verify_input check(.segment, .player_input(SW[3:0]), .sigs);
 endmodule
 

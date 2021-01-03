@@ -17,7 +17,7 @@
 `include "fsm_interface.sv"
 
 // Outputs 32-bit seed based on clock; ex 2->8 would be ABBAABBA
-module reg8_32(input clk, reset, fsm_sig.reg8 sigs, output reg [31:0] seed);
+module reg8_32(input clk, reset, fsm_sig.reg8 sigs, output logic [31:0] seed);
 	logic [7:0] seed_basis;
     // Increment 8 bit loop counter
 	always_ff @(posedge clk)

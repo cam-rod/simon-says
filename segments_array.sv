@@ -17,18 +17,15 @@
 `include "fsm_interface.sv"
 
  // Stores up to 32 previous colours, with logic "1" msb for unassigned position
-module segments_array(input [2:0] new_colour, input reset, clk, fsm_sig.segments sigs, output reg [31:0][2:0] segment);
+module segments_array(input [2:0] new_colour, input reset, clk, fsm_sig.segments sigs, output reg [32:0][1:0] segment);	
 	always_ff @(posedge clk)
 	begin
 		if(reset) // All segments are unassigned
-			for(int i=0;i<32;i+1)
-			begin
-				segment[i] <= 3'b100;
-			end
+			for(int i=0;i<33;i+1)
+				segment[i] <= 'b00;
 		else if(sigs.load_colour)
 		begin
-			for(int i=0;i<31;i+1)
-				segment[i+1] <= segment[i];
+			segment <= segment << 1;
 			segment[0] <= new_colour;
 		end
 		else

@@ -20,18 +20,18 @@
 
 interface fsm_sig;
 	logic start, load_colour, load_speed, rst_seedgen, player_turn, flash_clk; // FSM commands
-	logic [4:0] check_round;
+	logic [5:0] check_round;
 	logic [2:0] speed;
-	logic result, empty, pulse; // FSM inputs
+	logic result, pulse; // FSM inputs
 
-	modport fsm (input result, empty, pulse, output start, load_colour, load_speed, rst_seedgen, player_turn,
+	modport fsm (input result, pulse, output start, load_colour, load_speed, rst_seedgen, player_turn,
 				 flash_clk, check_round, speed);
 	modport reg8 (input rst_seedgen);
 	modport rng_in (input start);
 	modport segments (input load_colour);
-	modport flasher (input load_speed, speed, output pulse);
+	modport flash_timer (input load_speed, speed, output pulse);
 	modport led (input check_round, flash_clk);
-	modport check (input check_round, output result, empty);
+	modport check (input check_round, output result);
 endinterface
 
 `endif // _fsm_interface_sv

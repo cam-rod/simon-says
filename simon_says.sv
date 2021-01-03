@@ -39,7 +39,7 @@ endinterface
 module simon_says(input [9:0] SW, input [3:0] KEY, input CLOCK_50, output [9:0] LEDR);
 	assign reset = ~KEY[0];
 	logic [31:0] seed;
-	logic [31:0][2:0] segment;
+	logic [32:0][1:0] segment;
 	logic [5:0] current_round;
 	logic [1:0] new_colour;
 
@@ -47,7 +47,7 @@ module simon_says(input [9:0] SW, input [3:0] KEY, input CLOCK_50, output [9:0] 
 
 	// Setup each round
 	reg8_32 seedgen(.clk(CLOCK_50), .reset, .sigs, .seed);
-	rng rand(.clk(CLOCK_50), .reset, .sigs, seed_i(seed), number_o(new_colour));
+	rng rand(.clk(CLOCK_50), .reset, .sigs, .seed_i(seed), .number_o(new_colour));
 	segments_array set(.new_colour({1'b0, new_colour}), .reset, .clk(CLOCK_50), .sigs, .segment);
 
 	// Operational modules: timer controlled by parameter (max speed 125ms/colour, 16Hz signals), module to flash colours for user

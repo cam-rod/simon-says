@@ -22,13 +22,16 @@
 `include "segments_array.sv"
 `include "reg8_32.sv"
 `include "ip_cores/rng/rng.sv"
+`include "ip_cores/bin2bcd/bin2bcd.sv"
+`include "ip_cores/bin2bcd/bcd7seg.sv"
 `include "fsm_interface.sv"
 
-module simon_says(input [9:0] SW, input [3:0] KEY, input CLOCK_50, output [9:0] LEDR);
+module simon_says(input [9:0] SW, input [3:0] KEY, input CLOCK_50, output [9:0] LEDR, output [6:0] HEX0, HEX1);
 	assign reset = ~KEY[0];
 	logic [31:0] seed;
 	logic [32:0][1:0] segment;
 	logic [5:0] current_round;
+	logic [5:0] current_round_bcd;
 	logic [1:0] new_colour;
 
 	fsm_sig sigs();
@@ -41,6 +44,11 @@ module simon_says(input [9:0] SW, input [3:0] KEY, input CLOCK_50, output [9:0] 
 	// Operational modules: timer controlled by parameter (max speed 125ms/colour, 16Hz signals), module to flash colours for user
 	variable_timer flash_timer(.clk(CLOCK_50), .reset, .sigs);
 	colourflash displays(.sigs, .reset, .player_input(SW[3:0]), .segment, .disp_o(LEDR[3:0]));
+
+	// Display current round
+	bin2bcd #(.W(6)) convert(.bin(current_round), .bcd(current_round_bcd));
+	bcd7seg h1(.bcd({2'b0, current_round_bcd[5:4]}), .seg(HEX1));
+	bcd7seg h0(.bcd(current_round_bcd[3:0]), .seg(HEX0));
 
 	// Gameplay modules, FSM
 	fsm controller(.sigs, .reset, .clk(CLOCK_50), .current_round);

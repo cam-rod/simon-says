@@ -51,7 +51,7 @@ module simon_says(input [9:0] SW, input [3:0] KEY, input CLOCK_50, output [9:0] 
 	bcd7seg h0(.bcd(current_round_bcd[3:0]), .seg(HEX0));
 
 	// Gameplay modules, FSM
-	fsm controller(.sigs, .reset, .clk(CLOCK_50), .current_round);
+	fsm controller(.sigs, .reset, .clk(CLOCK_50), .launch_keys(KEY[1:0]), .player_input(SW[3:0]), .current_round);
 	verify_input check(.segment, .player_input(SW[3:0]), .sigs);
 endmodule
 

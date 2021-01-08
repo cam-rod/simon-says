@@ -1,5 +1,5 @@
 /* Finite state machine
- * Copyright (C) 2020, 2021 Cameron Rodriguez
+ * Copyright (C) 2021 Cameron Rodriguez
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,21 +26,22 @@ module fsm (input clk, reset, fsm_sig.fsm sigs, input [1:0] launch_keys, input [
 
     always_comb // Next state registers
     case (current)
-        READY1:         next <= launch_keys[1] : RST_SEEDGEN ? READY;               // Continue if KEY1 is pressed
+        READY1:         next <= launch_keys[0] : RST_SEEDGEN ? READY;                   // Continue if KEY1 is pressed
         RST_SEEDGEN:    next <= READY12;
-        READY12:        next <= &launch_keys : START_RNG : READY12;                 // Continue when KEY1, KEY2 are both pressed
+        READY12:        next <= &launch_keys : START_RNG : READY12;                     // Continue when KEY1, KEY2 are both pressed
         START_RNG:      next <= HOLD;
-        HOLD:           next <= |launch_keys : HOLD : ADD_CLR;                      // Continue after both keys are released
-        ADD_CLR:        next <= (current_round % 5 == 0) ? INC_SPEED : PULSE_ON;    // Increase speed every 5 rounds
-        INC_SPEED:      next <= PULSE_ON;
-        PULSE_ON:       next <= PULSE_OFF;
+        HOLD:           next <= |launch_keys : HOLD : ADD_CLR;                          // Continue after both keys are released
+        ADD_CLR:        next <= (current_round % 5 == 0) ? INC_SPEED : IS_NEXT_PULSE;   // Increase speed every 5 rounds
+        INC_SPEED:      next <= IS_NEXT_PULSE;
         IS_NEXT_PULSE:  if(pulse) begin // Wait until pulse is received
                             if(sigs.check_round==6'b0) next <= PREP; // Advance to player turn once all segments are shown
                             else next <= PULSE_ON;
                         end
                         else next <= IS_NEXT_PULSE;
+        PULSE_ON:       next <= pulse ? PULSE_OFF : PULSE_ON;
+        PULSE_OFF:      next <= IS_NEXT_PULSE;
         PREP:           next <= PLAYER_TURN;
-        PLAYER_TURN:    begin                                                       // Check whether to scan player input or start new round
+        PLAYER_TURN:    begin                                                           // Check whether to scan player input or start new round
                             if(sigs.check_round==6'b0)
                                 if(current_round[5]) next <= WIN; // Finished round 32 
                                 else next <= ADD_CLR;
@@ -49,12 +50,12 @@ module fsm (input clk, reset, fsm_sig.fsm sigs, input [1:0] launch_keys, input [
                             else
                                 next <= PLAYER_TURN;
                         end
-        GOOD_TURN:      next <= result ? DESELECT : FAIL_ON;                        // Check if move is valid
-        DESELECT:       next <= |player_input ? DESELECT : PLAYER_TURN;             // Advance after all options are deselected
+        GOOD_TURN:      next <= result ? DESELECT : FAIL_ON;                            // Check if move is valid
+        DESELECT:       next <= |player_input ? DESELECT : PLAYER_TURN;                 // Advance after all options are deselected
         FAIL_ON:        next <= FAIL_OFF;
-        FAIL_OFF:       next <= &fail_counter ? END : FAIL_ON;                      // Repeat until the incorrect colour is flashed thrice
+        FAIL_OFF:       next <= &fail_counter ? END : FAIL_ON;                          // Repeat until the incorrect colour is flashed thrice
         WIN:            next <= END;
-        END:            next <= END;                                                // Hold state until reset signal is recieved
+        END:            next <= END;                                                    // Hold state until reset signal is recieved
         default:        next <= READY1;
     endcase
 

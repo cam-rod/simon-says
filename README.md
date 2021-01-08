@@ -1,6 +1,6 @@
 # Simon Says
 
-Progressively developing Simon Says on a DE1-SoC FPGA (Intel Cyclone V). Later versions with may advantage of graphics over VGA.
+Progressively developing Simon Says on a DE1-SoC FPGA (Intel Cyclone V). Later versions may take advantage of graphics over VGA.
 
 ## IP Cores
 

@@ -18,27 +18,28 @@
 
 typedef enum {READY1, RST_SEEDGEN, READY12, START_RNG, HOLD, ADD_CLR, INC_SPEED,
       PULSE_ON, PULSE_OFF, IS_NEXT_PULSE, PREP, PLAYER_TURN, GOOD_TURN, DESELECT,
-      FAIL_ON, FAIL_OFF, WIN, END} state;
+      FAIL_ON, FAIL_ON_WAIT, FAIL_OFF, FAIL_OFF_WAIT, WIN, END} state;
 
 module fsm (input clk, reset, fsm_sig.fsm sigs, input [1:0] launch_keys, input [3:0] player_input, output [5:0] current_round);
     state current, next;
     logic [1:0] fail_counter;
+    logic [5:0] current_round_ff;
 
     always_comb // Next state registers
     case (current)
-        READY1:         next <= launch_keys[0] : RST_SEEDGEN ? READY;                   // Continue if KEY1 is pressed
+        READY1:         next <= launch_keys[0] ? RST_SEEDGEN : READY1;                   // Continue if KEY1 is pressed
         RST_SEEDGEN:    next <= READY12;
-        READY12:        next <= &launch_keys : START_RNG : READY12;                     // Continue when KEY1, KEY2 are both pressed
+        READY12:        next <= &launch_keys ? START_RNG : READY12;                     // Continue when KEY1, KEY2 are both pressed
         START_RNG:      next <= HOLD;
-        HOLD:           next <= |launch_keys : HOLD : ADD_CLR;                          // Continue after both keys are released
+        HOLD:           next <= |launch_keys ? HOLD : ADD_CLR;                          // Continue after both keys are released
         ADD_CLR:        next <= (current_round % 5 == 0) ? INC_SPEED : IS_NEXT_PULSE;   // Increase speed every 5 rounds
         INC_SPEED:      next <= IS_NEXT_PULSE;
-        IS_NEXT_PULSE:  if(pulse) begin // Wait until pulse is received
+        IS_NEXT_PULSE:  if(sigs.pulse) begin // Wait until pulse is received
                             if(sigs.check_round==6'b0) next <= PREP; // Advance to player turn once all segments are shown
                             else next <= PULSE_ON;
                         end
                         else next <= IS_NEXT_PULSE;
-        PULSE_ON:       next <= pulse ? PULSE_OFF : PULSE_ON;
+        PULSE_ON:       next <= sigs.pulse ? PULSE_OFF : PULSE_ON;
         PULSE_OFF:      next <= IS_NEXT_PULSE;
         PREP:           next <= PLAYER_TURN;
         PLAYER_TURN:    begin                                                           // Check whether to scan player input or start new round
@@ -50,10 +51,12 @@ module fsm (input clk, reset, fsm_sig.fsm sigs, input [1:0] launch_keys, input [
                             else
                                 next <= PLAYER_TURN;
                         end
-        GOOD_TURN:      next <= result ? DESELECT : FAIL_ON;                            // Check if move is valid
+        GOOD_TURN:      next <= sigs.result ? DESELECT : FAIL_ON;                            // Check if move is valid
         DESELECT:       next <= |player_input ? DESELECT : PLAYER_TURN;                 // Advance after all options are deselected
-        FAIL_ON:        next <= FAIL_OFF;
-        FAIL_OFF:       next <= &fail_counter ? END : FAIL_ON;                          // Repeat until the incorrect colour is flashed thrice
+        FAIL_ON:        next <= FAIL_ON_WAIT;
+        FAIL_ON_WAIT:   next <= sigs.pulse ? FAIL_OFF : FAIL_ON_WAIT;
+        FAIL_OFF:       next <= &fail_counter ? END : FAIL_OFF_WAIT;                    // Repeat until the incorrect colour is flashed thrice
+        FAIL_OFF_WAIT:  next <= sigs.pulse ? FAIL_ON : FAIL_OFF_WAIT;
         WIN:            next <= END;
         END:            next <= END;                                                    // Hold state until reset signal is recieved
         default:        next <= READY1;
@@ -62,40 +65,48 @@ module fsm (input clk, reset, fsm_sig.fsm sigs, input [1:0] launch_keys, input [
     always_comb
     begin : fsm_outputs
         // Default states
-        start <= '0;
-        load_colour <= '0;
-        load_speed <= '0;
-        rst_seedgen <= '0;
-        flash_clk <= '0;
+        sigs.start <= '0;
+        sigs.load_colour <= '0;
+        sigs.load_speed <= '0;
+        sigs.rst_seedgen <= '0;
+        sigs.flash_clk <= '0;
         case(current) // Set signals and registers
             READY1: begin // Reset state
-                current_round = '0;
-                check_round = '0;
-                fail_counter = '0;
-                speed = '0;
+                sigs.speed <= '0;
             end
-            RST_SEEDGEN: rst_seedgen <= '1;
-            START_RNG: start <= '1;
-            ADD_CLR: begin // Add colour and increase round
-                current_round = current_round + 1;
-                check_round <= current_round;
-                load_colour <= '1;
-            end
+            RST_SEEDGEN: sigs.rst_seedgen <= '1;
+            START_RNG: sigs.start <= '1;
+            ADD_CLR: sigs.load_colour <= '1;
             INC_SPEED: begin
-                speed <= speed + 1;
-                load_speed <= '1;
+                sigs.speed <= sigs.speed + 1;
+                sigs.load_speed <= '1;
             end
-            PULSE_ON: flash_clk <= '1; // Flash each colour
-            PULSE_OFF: check_round <= check_round - 1;
-            PREP: check_round <= current_round; // Reset check to current round
-            DESELECT: check_round <= check_round - 1; // Check next item
-            FAIL_ON: begin
-                if(&fail_counter==1'b0) current_round <= current_round - 1; // Set to final round passed
-                fail_counter <= fail_counter + 1; // Increases for each flash
-                flash_clk <= '1;
-            end
+            PULSE_ON: sigs.flash_clk <= '1; // Flash each colour
+            FAIL_ON: sigs.flash_clk <= '1;
+            FAIL_ON_WAIT: sigs.flash_clk <= '1;
         endcase
     end
+
+    always_ff @(posedge clk) // Round and fail counters, with blocking assignments
+    case(current)
+        READY1: begin
+            fail_counter <= '0;
+            current_round_ff = '0;
+            sigs.check_round = '0;
+        end
+        ADD_CLR: begin
+            current_round_ff = current_round_ff + 1;
+            sigs.check_round = current_round_ff; 
+        end
+        PULSE_OFF: sigs.check_round = sigs.check_round - 1;
+        PREP: sigs.check_round = current_round_ff; // Reset check to current round
+        DESELECT: sigs.check_round = sigs.check_round - 1; // Check next item
+        FAIL_ON: begin
+            if(&fail_counter==1'b0) current_round_ff = current_round_ff - 1; // Set to final round passed
+            fail_counter = fail_counter + 1; // Increases for each flash
+        end
+    endcase
+    assign current_round = current_round_ff;
 
     always_ff @(posedge clk) // Current state register
         current <= reset ? READY1 : next;

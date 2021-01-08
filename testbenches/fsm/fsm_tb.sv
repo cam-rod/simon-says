@@ -19,22 +19,22 @@
 `include "../../fsm_interface.sv"
 
 module fsm_tb;
-    logic clk, reset, result, pulse;
+    logic clk, reset;
     logic [1:0] launch_keys; // KEY1 and KEY2
     logic [3:0] player_input; // Switches
     logic [5:0] current_round;
     fsm_sig sigs();
 
-    fsm dut (.*);
+    fsm dut(.*);
 
     initial // Set signals, start clock
     begin
         launch_keys = '0;
         player_input = '0;
-        result = '0;
-        pulse = '0;
+        sigs.result = '0;
+        sigs.pulse = '0;
 
-        clk = '0
+        clk = '0;
         forever #1 clk = ~clk;
     end
 
@@ -56,36 +56,71 @@ module fsm_tb;
 
         // Current state IS_NEXT_PULSE
         #2; // Check state holding
-        pulse = '1;
+        sigs.pulse = '1;
         #2;
-        pulse = '0;
+        sigs.pulse = '0;
 
         // Current state PULSE_ON, wait for next pulse
         #4;
-        pulse = '1;
+        sigs.pulse = '1;
         #4;
-        pulse = '0;
+        sigs.pulse = '0;
 
         // Current state IS_NEXT_PULSE, move to stete PLAYER_TURN
-        pulse = '1;
+        sigs.pulse = '1;
         #4;
-        pulse = '0;
+        sigs.pulse = '0;
 
         // Process a valid player turn
         player_input = 4'b0100;
-        result = '1;
+        sigs.result = '1;
         #6; // Ensure hold in state DESELECT
         player_input = '0;
         #2;
 
         // Current state PLAYER_TURN, end game as win
-        force dut.current_round = '1;
-        release dut.current_round;
+        force dut.current_round_ff = '1;
+        release dut.current_round_ff;
         #4; // End of basic game
     end
 
     always // Edge cases
     begin
-        
+        #48; // Begin testing after END state is reached
+
+        reset = ~reset;
+        #2;
+        reset = ~reset;
+
+        // Test increasing speed
+        force dut.current_round_ff = 6'd5;
+        release dut.current_round_ff;
+        force dut.current = ADD_CLR;
+        release dut.current;
+        #4;
+
+        // PLAYER_TURN: add the next colour
+        force dut.current = PLAYER_TURN;
+        release dut.current;
+        force sigs.check_round = '0;
+        release sigs.check_round;
+        #4; // Ensure speed is not incremented again
+
+        // PLAYER_TURN: test performance if turn if mistake is made
+        force dut.current = GOOD_TURN;
+        release dut.current;
+        sigs.result = '0;
+        #6; // Reduce to final round, hold in FAIL_ON_WAIT state
+        sigs.pulse = '1;
+        #2;
+        sigs.pulse = '0;
+        #4; // Hold in FAIL_OFF_WAIT state
+
+        // End game after failing
+        force dut.current = FAIL_OFF;
+        release dut.current;
+        force dut.fail_counter = 2'b11;
+        release dut.fail_counter;
+        #4;  // Hold in end state
     end
-endmodule
+endmodule // Testing complete

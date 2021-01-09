@@ -16,16 +16,25 @@
 
 `include "fsm_interface.sv"
 
+`ifndef _reg8_32_sv
+`define _reg8_32_sv
+
 // Outputs 32-bit seed based on clock; ex 2->8 would be ABBAABBA
-module reg8_32(input clk, reset, fsm_sig.reg8 sigs, output logic [31:0] seed);
-	logic [7:0] seed_basis;
+module reg8_32(fsm_sig.reg8 sigs, input clk, reset, output logic [31:0] seed);
+	logic [7:0] seed_basis, seed_inv;
     // Increment 8 bit loop counter
 	always_ff @(posedge clk)
 		if(reset | sigs.rst_seedgen)
+		begin
 			seed_basis <= '0;
+			seed_inv <= '0;
+		end
 		else
-			seed_basis[7:0] <= (&seed_basis[7:0]) ? 8'b0 : seed_basis[7:0] + 8'b1;
-
+		begin
+			seed_basis <= (&seed_basis) ? 8'b0 : seed_basis + 8'b1;
+			seed_inv <= (|seed_inv) ? '1 : seed_inv - 8'b1; // Quartus Prime does not support streaming operators
+		end
 	// Contstruct remainder of 32-bits
-	assign seed = {{<<{seed_basis[7:0]}},{>>{seed_basis[7:0]}},{<<{seed_basis[7:0]}},{>>{seed_basis[7:0]}}};
+	assign seed = {seed_inv, seed_basis, seed_inv, seed_basis};
 endmodule
+`endif // _reg8_32_sv

@@ -2,5 +2,7 @@
 .db/
 work/
 vsim.wlf
+output_files/
+db/
 # Cache files
 **/*-cache.lib

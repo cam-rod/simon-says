@@ -33,5 +33,4 @@ interface fsm_sig;
 	modport led (input check_round, flash_clk);
 	modport check (input check_round, output result);
 endinterface
-
 `endif // _fsm_interface_sv

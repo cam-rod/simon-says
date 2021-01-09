@@ -16,6 +16,9 @@
 
 `include "fsm_interface.sv"
 
+`ifndef _colourflash_sv
+`define _colourflash_sv
+
 // Flashes colours, based on display, and also shows currently selected option
 module colourflash(fsm_sig.led sigs, input reset, input [3:0] player_input, input [32:0][1:0] segment, output logic [3:0] disp_o);
 	logic [3:0] disp_ff; // Used for procedural logic
@@ -34,3 +37,4 @@ module colourflash(fsm_sig.led sigs, input reset, input [3:0] player_input, inpu
 		else
 			disp_o <= player_input | disp_ff;
 endmodule
+`endif // _colourflash_sv

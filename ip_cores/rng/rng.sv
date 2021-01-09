@@ -58,12 +58,12 @@
 //
 
 `timescale 10ns/1ns
+`include "../../fsm_interface.sv"
 
-module rng(clk,reset,seed_i,fsm_sig.rng_in sigs,number_out);
-input clk;
-input reset;
-input [31:0] seed_i;
-output [1:0] number_out;
+`ifndef _rng_sv
+`define _rng_sv
+
+module rng(fsm_sig.rng_in sigs, input clk, reset, input [31:0] seed_i, output [1:0] number_out);
 
 reg [31:0] number_o;
 
@@ -92,7 +92,7 @@ always @(posedge clk or negedge reset)
 
       begin
 
-      if (sigs.loadseed_i )
+      if (sigs.start)
 
          begin
 
@@ -176,7 +176,7 @@ always @(posedge clk or negedge reset)
 
       begin
 
-      if (sigs.loadseed_i )
+      if (sigs.start)
 
          begin
 
@@ -273,3 +273,4 @@ always @(posedge clk or negedge reset)
 
    assign number_out = number_o[1:0];
 endmodule
+`endif // _rng_sv

@@ -16,6 +16,9 @@
 
 `include "fsm_interface.sv"
 
+`ifndef _verify_input_sv
+`define _verify_input_sv
+
 // Confirms whether the segment selected is accurate, or informs if current segment is empty
 module verify_input(input [32:0][1:0] segment, input [3:0] player_input, fsm_sig.check sigs);
 	logic [1:0] play;
@@ -37,3 +40,4 @@ module verify_input(input [32:0][1:0] segment, input [3:0] player_input, fsm_sig
 	end
 	assign sigs.result = invalid ? 1'b0 : (segment[sigs.check_round] == play);
 endmodule
+`endif // _verify_input_sv

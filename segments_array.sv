@@ -16,7 +16,10 @@
 
 `include "fsm_interface.sv"
 
- // Stores up to 32 previous colours, with logic "1" msb for unassigned position
+`ifndef _segments_array_sv
+`define _segments_array_sv
+
+// Stores up to 32 previous colours, with logic "1" msb for unassigned position
 module segments_array(input [1:0] new_colour, input reset, clk, fsm_sig.segments sigs, output reg [32:0][1:0] segment);	
 	always_ff @(posedge clk)
 	begin
@@ -32,3 +35,4 @@ module segments_array(input [1:0] new_colour, input reset, clk, fsm_sig.segments
 			segment <= segment;
 	end
 endmodule
+`endif // _segments_array_sv

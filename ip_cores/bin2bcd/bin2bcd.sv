@@ -110,6 +110,9 @@
 //                                                                                //
 ////////////////////////////////////////////////////////////////////////////////////
 
+`ifndef _bin2bcd_sv
+`define _bin2bcd_sv
+
 module bin2bcd
  #( parameter                W = 18)  // input width
   ( input      [W-1      :0] bin   ,  // binary
@@ -127,3 +130,4 @@ module bin2bcd
   end
 
 endmodule
+`endif // _bin2bcd_sv

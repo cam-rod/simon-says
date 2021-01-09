@@ -16,11 +16,15 @@
 
 `include "fsm_interface.sv"
 
-typedef enum {READY1, RST_SEEDGEN, READY12, START_RNG, HOLD, ADD_CLR, INC_SPEED,
-      PULSE_ON, PULSE_OFF, IS_NEXT_PULSE, PREP, PLAYER_TURN, GOOD_TURN, NEXT_SEG, DESELECT,
-      FAIL_ON, FAIL_ON_WAIT, FAIL_OFF, FAIL_OFF_WAIT, WIN, END} state;
+`ifndef _fsm_sv
+`define _fsm_sv 
+
 
 module fsm (input clk, reset, fsm_sig.fsm sigs, input [1:0] launch_keys, input [3:0] player_input, output [5:0] current_round);
+    typedef enum {READY1, RST_SEEDGEN, READY12, START_RNG, HOLD, ADD_CLR, INC_SPEED,
+        PULSE_ON, PULSE_OFF, IS_NEXT_PULSE, PREP, PLAYER_TURN, GOOD_TURN, NEXT_SEG, DESELECT,
+        FAIL_ON, FAIL_ON_WAIT, FAIL_OFF, FAIL_OFF_WAIT, WIN, END} state;
+    
     state current, next;
     logic [1:0] fail_counter;
     logic [5:0] current_round_ff;
@@ -112,3 +116,4 @@ module fsm (input clk, reset, fsm_sig.fsm sigs, input [1:0] launch_keys, input [
     always_ff @(posedge clk) // Current state register
         current <= reset ? READY1 : next;
 endmodule
+`endif // _fsm_sv

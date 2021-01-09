@@ -30,6 +30,9 @@
 // Ameer M.S. Abdelhadi (ameer@ece.ubc.ca; ameer.abdelhadi@gmail.com), Sept. 2012 //
 ////////////////////////////////////////////////////////////////////////////////////
 
+`ifndef _bcd7seg_sv
+`define _bcd7seg_sv
+
 module bcd7seg	(
   input      [3:0] bcd,
   output reg [6:0] seg
@@ -52,3 +55,4 @@ always @(*) begin
 end
 
 endmodule
+`endif // _bcd7seg_sv

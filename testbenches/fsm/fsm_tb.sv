@@ -64,7 +64,6 @@ module fsm_tb;
         #4;
         sigs.pulse = '1;
         #4;
-        sigs.pulse = '0;
 
         // Current state IS_NEXT_PULSE, move to stete PLAYER_TURN
         sigs.pulse = '1;
@@ -74,14 +73,14 @@ module fsm_tb;
         // Process a valid player turn
         player_input = 4'b0100;
         sigs.result = '1;
-        #6; // Ensure hold in state DESELECT
+        #8; // Ensure hold in state DESELECT
         player_input = '0;
         #2;
 
         // Current state PLAYER_TURN, end game as win
         force dut.current_round_ff = '1;
         release dut.current_round_ff;
-        #4; // End of basic game
+        #40; // End of basic game
     end
 
     always // Edge cases

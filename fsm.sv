@@ -17,7 +17,7 @@
 `include "fsm_interface.sv"
 
 typedef enum {READY1, RST_SEEDGEN, READY12, START_RNG, HOLD, ADD_CLR, INC_SPEED,
-      PULSE_ON, PULSE_OFF, IS_NEXT_PULSE, PREP, PLAYER_TURN, GOOD_TURN, DESELECT,
+      PULSE_ON, PULSE_OFF, IS_NEXT_PULSE, PREP, PLAYER_TURN, GOOD_TURN, NEXT_SEG, DESELECT,
       FAIL_ON, FAIL_ON_WAIT, FAIL_OFF, FAIL_OFF_WAIT, WIN, END} state;
 
 module fsm (input clk, reset, fsm_sig.fsm sigs, input [1:0] launch_keys, input [3:0] player_input, output [5:0] current_round);
@@ -32,7 +32,7 @@ module fsm (input clk, reset, fsm_sig.fsm sigs, input [1:0] launch_keys, input [
         READY12:        next <= &launch_keys ? START_RNG : READY12;                     // Continue when KEY1, KEY2 are both pressed
         START_RNG:      next <= HOLD;
         HOLD:           next <= |launch_keys ? HOLD : ADD_CLR;                          // Continue after both keys are released
-        ADD_CLR:        next <= (current_round % 5 == 0) ? INC_SPEED : IS_NEXT_PULSE;   // Increase speed every 5 rounds
+        ADD_CLR:        next <= ((current_round % 5 == 0) && (current_round != 0)) ? INC_SPEED : IS_NEXT_PULSE;   // Increase speed every 5 rounds
         INC_SPEED:      next <= IS_NEXT_PULSE;
         IS_NEXT_PULSE:  if(sigs.pulse) begin // Wait until pulse is received
                             if(sigs.check_round==6'b0) next <= PREP; // Advance to player turn once all segments are shown
@@ -51,7 +51,8 @@ module fsm (input clk, reset, fsm_sig.fsm sigs, input [1:0] launch_keys, input [
                             else
                                 next <= PLAYER_TURN;
                         end
-        GOOD_TURN:      next <= sigs.result ? DESELECT : FAIL_ON;                            // Check if move is valid
+        GOOD_TURN:      next <= sigs.result ? NEXT_SEG : FAIL_ON; // Check if move is valid
+        NEXT_SEG:       next <= DESELECT;
         DESELECT:       next <= |player_input ? DESELECT : PLAYER_TURN;                 // Advance after all options are deselected
         FAIL_ON:        next <= FAIL_ON_WAIT;
         FAIL_ON_WAIT:   next <= sigs.pulse ? FAIL_OFF : FAIL_ON_WAIT;
@@ -100,7 +101,7 @@ module fsm (input clk, reset, fsm_sig.fsm sigs, input [1:0] launch_keys, input [
         end
         PULSE_OFF: sigs.check_round = sigs.check_round - 1;
         PREP: sigs.check_round = current_round_ff; // Reset check to current round
-        DESELECT: sigs.check_round = sigs.check_round - 1; // Check next item
+        NEXT_SEG: sigs.check_round = (sigs.check_round == 6'b0) ? 6'b0 : sigs.check_round - 1; // Check next item
         FAIL_ON: begin
             if(&fail_counter==1'b0) current_round_ff = current_round_ff - 1; // Set to final round passed
             fail_counter = fail_counter + 1; // Increases for each flash

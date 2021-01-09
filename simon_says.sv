@@ -34,6 +34,7 @@ module simon_says(input [9:0] SW, input [3:0] KEY, input CLOCK_50, output [9:0] 
 	logic [1:0] new_colour;
 	logic reset;
 	assign reset = ~KEY[0];
+	assign LEDR[9:4] = '0;
 
 	fsm_sig sigs();
 
@@ -62,10 +63,7 @@ module variable_timer(input clk, reset, fsm_sig.flash_timer sigs);
 	always_ff @(posedge clk)
 	begin
 		if(reset)
-		begin
 			counter <= 26'd49_999_999;
-			sigs.speed <= '0;
-		end
 		else if(sigs.load_speed | sigs.pulse)
 			case (sigs.speed)
 				3'b000: counter <= 26'd49_999_999; // 1Hz

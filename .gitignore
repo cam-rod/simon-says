@@ -2,7 +2,11 @@
 .db/
 work/
 vsim.wlf
-output_files/
+output_files/*
 db/
+incremental_db/
 # Cache files
 **/*-cache.lib
+# Include bistream and programming toolchain
+!**/simon_says.sof
+!**/simon_says.cdf

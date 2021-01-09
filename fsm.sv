@@ -19,12 +19,11 @@
 `ifndef _fsm_sv
 `define _fsm_sv 
 
+typedef enum {READY1, RST_SEEDGEN, READY12, START_RNG, HOLD, ADD_CLR, INC_SPEED,
+    PULSE_ON, PULSE_OFF, IS_NEXT_PULSE, PREP, PLAYER_TURN, GOOD_TURN, NEXT_SEG, DESELECT,
+    FAIL_ON, FAIL_ON_WAIT, FAIL_OFF, FAIL_OFF_WAIT, WIN, END} state;
 
 module fsm (input clk, reset, fsm_sig.fsm sigs, input [1:0] launch_keys, input [3:0] player_input, output [5:0] current_round);
-    typedef enum {READY1, RST_SEEDGEN, READY12, START_RNG, HOLD, ADD_CLR, INC_SPEED,
-        PULSE_ON, PULSE_OFF, IS_NEXT_PULSE, PREP, PLAYER_TURN, GOOD_TURN, NEXT_SEG, DESELECT,
-        FAIL_ON, FAIL_ON_WAIT, FAIL_OFF, FAIL_OFF_WAIT, WIN, END} state;
-    
     state current, next;
     logic [1:0] fail_counter;
     logic [5:0] current_round_ff;
@@ -76,16 +75,10 @@ module fsm (input clk, reset, fsm_sig.fsm sigs, input [1:0] launch_keys, input [
         sigs.rst_seedgen <= '0;
         sigs.flash_clk <= '0;
         case(current) // Set signals and registers
-            READY1: begin // Reset state
-                sigs.speed <= '0;
-            end
             RST_SEEDGEN: sigs.rst_seedgen <= '1;
             START_RNG: sigs.start <= '1;
             ADD_CLR: sigs.load_colour <= '1;
-            INC_SPEED: begin
-                sigs.speed <= sigs.speed + 1;
-                sigs.load_speed <= '1;
-            end
+            INC_SPEED: sigs.load_speed <= '1;
             PULSE_ON: sigs.flash_clk <= '1; // Flash each colour
             FAIL_ON: sigs.flash_clk <= '1;
             FAIL_ON_WAIT: sigs.flash_clk <= '1;
@@ -95,20 +88,28 @@ module fsm (input clk, reset, fsm_sig.fsm sigs, input [1:0] launch_keys, input [
     always_ff @(posedge clk) // Round and fail counters, with blocking assignments
     case(current)
         READY1: begin
-            fail_counter <= '0;
+            fail_counter = '0;
             current_round_ff = '0;
             sigs.check_round = '0;
+            sigs.speed = '0;
         end
         ADD_CLR: begin
-            current_round_ff = current_round_ff + 1;
+            current_round_ff = current_round_ff + 1'b1;
             sigs.check_round = current_round_ff; 
         end
-        PULSE_OFF: sigs.check_round = sigs.check_round - 1;
+        INC_SPEED: sigs.speed = sigs.speed + 1'b1;
+        PULSE_OFF: sigs.check_round = sigs.check_round - 1'b1;
         PREP: sigs.check_round = current_round_ff; // Reset check to current round
-        NEXT_SEG: sigs.check_round = (sigs.check_round == 6'b0) ? 6'b0 : sigs.check_round - 1; // Check next item
+        NEXT_SEG: sigs.check_round = (sigs.check_round == 6'b0) ? 6'b0 : sigs.check_round - 1'b1; // Check next item
         FAIL_ON: begin
-            if(&fail_counter==1'b0) current_round_ff = current_round_ff - 1; // Set to final round passed
-            fail_counter = fail_counter + 1; // Increases for each flash
+            if(&fail_counter==1'b0) current_round_ff = current_round_ff - 1'b1; // Set to final round passed
+            fail_counter = fail_counter + 1'b1; // Increases for each flash
+        end
+        default: begin
+            fail_counter <= fail_counter;
+            sigs.speed <= sigs.speed;
+            sigs.check_round <= sigs.check_round;
+            current_round_ff <= current_round_ff;
         end
     endcase
     assign current_round = current_round_ff;

@@ -55,17 +55,12 @@ module simon_says(input [9:0] SW, input [3:0] KEY, input CLOCK_50, output [9:0] 
 	bcd7seg h0(.bcd(current_round_bcd[3:0]), .seg(HEX0));
 
 	// Gameplay modules, FSM
-	fsm controller(.sigs(sigs.fsm), .reset, .clk(CLOCK_50), .launch_keys, .player_input(SW[3:0]), .current_round, .cur_state);
+	fsm controller(.sigs(sigs.fsm), .reset, .clk(CLOCK_50), .launch_keys, .player_input(SW[3:0]), .current_round, .cur_state, .read(LEDR[9]));
 	verify_input check(.segment, .player_input(SW[3:0]), .sigs(sigs.check));
 
 	// HW Debugger
 	bcd7seg h5(.bcd({3'b0, cur_state[4]}), .seg(HEX5));
 	bcd7seg h4(.bcd(cur_state[3:0]), .seg(HEX4));
-	logic p_f;
-	always_ff @(posedge CLOCK_50)
-		if(reset) p_f = '0;
-		else p_f = sigs.pulse ? ~p_f : p_f;
-	assign LEDR[9] = p_f;
 endmodule
 
 module variable_timer(input clk, reset, fsm_sig.flash_timer sigs);

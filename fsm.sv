@@ -23,7 +23,7 @@ typedef enum {READY1, RST_SEEDGEN, READY12, START_RNG, HOLD, ADD_CLR, INC_SPEED,
     PULSE_ON, PULSE_OFF, IS_NEXT_PULSE, PREP, PLAYER_TURN, GET_INPUT, GOOD_TURN, NEXT_SEG, DEBOUNCE1,
     DESELECT, DEBOUNCE2, FAIL_ON, FAIL_ON_WAIT, FAIL_OFF, FAIL_OFF_WAIT, WIN, END} state;
 
-module fsm (input clk, reset, fsm_sig.fsm sigs, input [1:0] launch_keys, input [3:0] player_input, output [5:0] current_round, output [4:0] cur_state); // cur_state is an HW state debugger
+module fsm (input clk, reset, fsm_sig.fsm sigs, input [1:0] launch_keys, input [3:0] player_input, output [5:0] current_round, output [4:0] cur_state, output read); // cur_state is an HW state debugger
     state current, next;
     assign cur_state = current; // HW debugger
     logic [1:0] fail_counter;
@@ -58,10 +58,10 @@ module fsm (input clk, reset, fsm_sig.fsm sigs, input [1:0] launch_keys, input [
                                 else
                                     next <= PLAYER_TURN;
                             end
-            GET_INPUT:      next <= GOOD_TURN;
+            GET_INPUT:      next <= DEBOUNCE1;
+            DEBOUNCE1:      next <= (debounced == 26'b0) ? GOOD_TURN: DEBOUNCE1;             // Ensures no inputs are accidentally read
             GOOD_TURN:      next <= sigs.result ? NEXT_SEG : FAIL_ON; // Check if move is valid
-            NEXT_SEG:       next <= DEBOUNCE1;
-            DEBOUNCE1:      next <= (debounced == 26'b0) ? DESELECT: DEBOUNCE1;             // Ensures no inputs are accidentally read
+            NEXT_SEG:       next <= DESELECT;
             DESELECT:       next <= |player_input ? DESELECT : DEBOUNCE2;                    // Advance after all options are deselected
             DEBOUNCE2:      next <= (debounced == 26'b0) ? PLAYER_TURN : DEBOUNCE2;         // Ensures no inputs are accidentally read
             FAIL_ON:        next <= FAIL_ON_WAIT;
@@ -100,6 +100,7 @@ module fsm (input clk, reset, fsm_sig.fsm sigs, input [1:0] launch_keys, input [
             sigs.check_round = '0;
             sigs.speed = '0;
             debounced = '0;
+            read = '0;
         end
         ADD_CLR: begin
             current_round_ff = current_round_ff + 1'b1;
@@ -108,12 +109,14 @@ module fsm (input clk, reset, fsm_sig.fsm sigs, input [1:0] launch_keys, input [
         INC_SPEED: sigs.speed = sigs.speed + 1'b1;
         PULSE_OFF: sigs.check_round = sigs.check_round - 1'b1;
         PREP: sigs.check_round = current_round_ff; // Reset check to current round
-        NEXT_SEG: begin
-            sigs.check_round = sigs.check_round - 1'b1; // Check next item
-            debounced = 26'd14_999_999; // 300ms debounce
-        end
+        PLAYER_TURN: read = '0;
+        GET_INPUT: debounced = 26'd19_999_999; // 400ms debounce
         DEBOUNCE1: debounced = (debounced == 26'b0) ? '0 : debounced - 1'b1;
-        DESELECT: debounced = 26'd14_999_999; // 300ms debounce
+        NEXT_SEG: sigs.check_round = sigs.check_round - 1'b1; // Check next item
+        DESELECT: begin
+            read = '1;
+            debounced = 26'd19_999_999; // 400ms debounce 
+        end
         DEBOUNCE2: debounced = (debounced == 26'b0) ? '0 : debounced - 1'b1;
         FAIL_ON: begin
             if(fail_counter==2'b0) current_round_ff = current_round_ff - 1'b1; // Set to final round passed

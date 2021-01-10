@@ -28,10 +28,10 @@ module verify_input(input [32:0][1:0] segment, input [3:0] player_input, fsm_sig
 	begin
 		invalid <= 1'b0;
 		case (player_input)
-			4'b1000: play <= 'b11;
-			4'b0100: play <= 'b10;
-			4'b0010: play <= 'b01;
 			4'b0001: play <= 'b00;
+			4'b0010: play <= 'b01;
+			4'b0100: play <= 'b10;
+			4'b1000: play <= 'b11;
 			default: begin
 				play <= 'b00;
 				invalid <= 1'b1;

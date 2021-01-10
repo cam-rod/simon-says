@@ -26,21 +26,23 @@
 `include "ip_cores/bin2bcd/bcd7seg.sv"
 `include "fsm_interface.sv"
 
-module simon_says(input [9:0] SW, input [3:0] KEY, input CLOCK_50, output [9:0] LEDR, output [6:0] HEX0, HEX1);
+module simon_says(input [9:0] SW, input [3:0] KEY, input CLOCK_50, output [9:0] LEDR, output [6:0] HEX0, HEX1, HEX4, HEX5);
 	logic [31:0] seed;
 	logic [32:0][1:0] segment;
 	logic [5:0] current_round;
 	logic [5:0] current_round_bcd;
-	logic [1:0] new_colour;
+	logic [1:0] new_colour, launch_keys;
 	logic reset;
+	logic [4:0] cur_state; // HW debugger
 	assign reset = ~KEY[0];
-	assign LEDR[9:4] = '0;
+	assign launch_keys = ~KEY[2:1];
+	assign LEDR[8:4] = '0; // HW debugger
 
 	fsm_sig sigs();
 
 	// Setup each round
 	reg8_32 seedgen(.clk(CLOCK_50), .reset, .sigs(sigs.reg8), .seed);
-	rng randomized(.clk(CLOCK_50), .reset, .sigs(sigs.rng_in), .seed_i(seed), .number_out(new_colour));
+	rng randomized(.clk(CLOCK_50), .reset(KEY[0]), .sigs(sigs.rng_in), .seed_i(seed), .number_out(new_colour));
 	segments_array set(.new_colour(new_colour), .reset, .clk(CLOCK_50), .sigs(sigs.segments), .segment);
 
 	// Operational modules: timer controlled by parameter (max speed 125ms/colour, 16Hz signals), module to flash colours for user
@@ -53,8 +55,17 @@ module simon_says(input [9:0] SW, input [3:0] KEY, input CLOCK_50, output [9:0] 
 	bcd7seg h0(.bcd(current_round_bcd[3:0]), .seg(HEX0));
 
 	// Gameplay modules, FSM
-	fsm controller(.sigs(sigs.fsm), .reset, .clk(CLOCK_50), .launch_keys(KEY[1:0]), .player_input(SW[3:0]), .current_round);
+	fsm controller(.sigs(sigs.fsm), .reset, .clk(CLOCK_50), .launch_keys, .player_input(SW[3:0]), .current_round, .cur_state);
 	verify_input check(.segment, .player_input(SW[3:0]), .sigs(sigs.check));
+
+	// HW Debugger
+	bcd7seg h5(.bcd({3'b0, cur_state[4]}), .seg(HEX5));
+	bcd7seg h4(.bcd(cur_state[3:0]), .seg(HEX4));
+	logic p_f;
+	always_ff @(posedge CLOCK_50)
+		if(reset) p_f = '0;
+		else p_f = sigs.pulse ? ~p_f : p_f;
+	assign LEDR[9] = p_f;
 endmodule
 
 module variable_timer(input clk, reset, fsm_sig.flash_timer sigs);
@@ -71,11 +82,11 @@ module variable_timer(input clk, reset, fsm_sig.flash_timer sigs);
 				3'b010: counter <= 26'd12_499_999; // 4Hz
 				3'b011: counter <= 26'd6_249_999; // 8Hz
 				3'b100: counter <= 26'd3_124_999; // 16Hz
-				default: counter <= 26'd1;
+				default: counter <= 26'd3; // 25MHz
 			endcase
 		else
 			counter <= counter - 26'b1;
 	end
 
-	assign sigs.pulse = (counter == 26'b0);
+	assign sigs.pulse = (counter[25:1] == 25'b0);
 endmodule

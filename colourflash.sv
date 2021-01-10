@@ -22,19 +22,25 @@
 // Flashes colours, based on display, and also shows currently selected option
 module colourflash(fsm_sig.led sigs, input reset, input [3:0] player_input, input [32:0][1:0] segment, output logic [3:0] disp_o);
 	logic [3:0] disp_ff; // Used for procedural logic
-    always_ff @(posedge sigs.flash_clk) // Toggle light
-        case (segment[sigs.check_round])
-            2'b00: disp_ff <= 4'b0001;
-            2'b01: disp_ff <= 4'b0010;
-            2'b10: disp_ff <= 4'b0100;
-            2'b11: disp_ff <= 4'b1000;
-            default: disp_ff <= '0;
-        endcase
+    always_ff @(posedge sigs.flash_clk, posedge reset) // Toggle light
+        if(reset)
+            disp_ff <= '0;
+        else
+            case (segment[sigs.check_round])
+                2'b00: disp_ff <= 4'b0001;
+                2'b01: disp_ff <= 4'b0010;
+                2'b10: disp_ff <= 4'b0100;
+                2'b11: disp_ff <= 4'b1000;
+                default: disp_ff <= '0;
+            endcase
 	
 	always_comb // Display player input, not clearing any flashed info
 		if(reset)
 			disp_o <= '0;
 		else
-			disp_o <= player_input | disp_ff;
+        begin
+            if(sigs.flash_clk) disp_o <= player_input | disp_ff;
+			else disp_o <= player_input;
+        end
 endmodule
 `endif // _colourflash_sv

@@ -24,11 +24,11 @@ module segments_array(input [1:0] new_colour, input reset, clk, fsm_sig.segments
 	always_ff @(posedge clk)
 	begin
 		if(reset) // All segments are unassigned
-			for(int i=0;i<33;i++)
-				segment[i] <='b00;
+			segment = '0;
 		else if(sigs.load_colour)
 		begin
-			segment <= segment << 2;
+			for(int i = 2; i < 33; i++)
+				segment[i] <= segment[i-1];
 			segment[1] <= new_colour; // First slot is placeholder to avoid overflow issues
 		end
 		else

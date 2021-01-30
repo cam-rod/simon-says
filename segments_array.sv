@@ -20,19 +20,29 @@
 `define _segments_array_sv
 
 // Stores up to 32 previous colours, with logic "1" msb for unassigned position
-module segments_array(input [1:0] new_colour, input reset, clk, fsm_sig.segments sigs, output reg [32:0][1:0] segment);	
+module segments_array(input [1:0] new_colour, input reset, clk, fsm_sig.segments sigs, output [32:0][1:0] segment);	
+	logic [30:0][1:0] segs_main;
+	logic [1:0] seg_new;
+
 	always_ff @(posedge clk)
 	begin
 		if(reset) // All segments are unassigned
-			segment = '0;
+		begin
+			segs_main = '0;
+			seg_new = '0;
+		end
 		else if(sigs.load_colour)
 		begin
-			for(int i = 2; i < 33; i++)
-				segment[i] <= segment[i-1];
-			segment[1] <= new_colour; // First slot is placeholder to avoid overflow issues
+			segs_main <= (segs_main << 2) | seg_new;
+			seg_new <= new_colour;
 		end
 		else
-			segment <= segment;
+		begin
+			segs_main <= segs_main;
+			seg_new <= seg_new;
+		end
 	end
+
+	assign segment = {segs_main, seg_new, 2'b00}; // First slot is placeholder to avoid overflow issues
 endmodule
 `endif // _segments_array_sv

@@ -34,7 +34,7 @@ module verify_input_tb;
     begin
         $readmemb("testbenches/verify_input/segment_src.txt", inputs);
 
-        for(i=;i<33;i=i+1)
+        for(i=0;i<33;i=i+1)
             segment[i] = inputs[i%5][1:0];
     end
 

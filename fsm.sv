@@ -23,9 +23,9 @@ typedef enum {READY1, RST_SEEDGEN, READY12, START_RNG, HOLD, ADD_CLR, INC_SPEED,
     PULSE_ON, PULSE_OFF, IS_NEXT_PULSE, PREP, PLAYER_TURN, GET_INPUT, GOOD_TURN, NEXT_SEG, DEBOUNCE1,
     DESELECT, DEBOUNCE2, FAIL_ON, FAIL_ON_WAIT, FAIL_OFF, FAIL_OFF_WAIT, WIN, END} state;
 
-module fsm (input clk, reset, fsm_sig.fsm sigs, input [1:0] launch_keys, input [3:0] player_input, output [5:0] current_round, output [4:0] cur_state, output read); // cur_state is an HW state debugger
+module fsm (input clk, reset, fsm_sig.fsm sigs, input [1:0] launch_keys, input [3:0] player_input, output [5:0] current_round, output [4:0] cur_state, output logic read); // cur_state is an HW state debugger
     state current, next;
-    assign cur_state = current; // HW debugger
+    assign cur_state = current[4:0]; // HW debugger
     logic [1:0] fail_counter;
     logic [5:0] current_round_ff;
     logic [25:0] debounced;
@@ -42,7 +42,7 @@ module fsm (input clk, reset, fsm_sig.fsm sigs, input [1:0] launch_keys, input [
             ADD_CLR:        next <= ((current_round % 5 == 0) && (current_round != 0)) ? INC_SPEED : IS_NEXT_PULSE;   // Increase speed every 5 rounds
             INC_SPEED:      next <= IS_NEXT_PULSE;
             IS_NEXT_PULSE:  if(sigs.pulse) begin // Wait until pulse is received
-                                if(sigs.check_round==6'b0) next <= PREP; // Advance to player turn once all segments are shown
+                                if(|sigs.check_round == 1'b0) next <= PREP; // Advance to player turn once all segments are shown
                                 else next <= PULSE_ON;
                             end
                             else next <= IS_NEXT_PULSE;
@@ -50,7 +50,7 @@ module fsm (input clk, reset, fsm_sig.fsm sigs, input [1:0] launch_keys, input [
             PULSE_OFF:      next <= IS_NEXT_PULSE;
             PREP:           next <= PLAYER_TURN;
             PLAYER_TURN:    begin                                                           // Check whether to scan player input or start new round
-                                if(sigs.check_round==6'b0)
+                                if(|sigs.check_round == 1'b0)
                                     if(current_round[5]) next <= WIN; // Finished round 32 
                                     else next <= ADD_CLR;
                                 else if (|player_input) // Advance when move is played             
@@ -59,11 +59,11 @@ module fsm (input clk, reset, fsm_sig.fsm sigs, input [1:0] launch_keys, input [
                                     next <= PLAYER_TURN;
                             end
             GET_INPUT:      next <= DEBOUNCE1;
-            DEBOUNCE1:      next <= (debounced == 26'b0) ? GOOD_TURN: DEBOUNCE1;             // Ensures no inputs are accidentally read
+            DEBOUNCE1:      next <= (|debounced == 1'b0) ? GOOD_TURN : DEBOUNCE1;             // Ensures no inputs are accidentally read
             GOOD_TURN:      next <= sigs.result ? NEXT_SEG : FAIL_ON; // Check if move is valid
             NEXT_SEG:       next <= DESELECT;
             DESELECT:       next <= |player_input ? DESELECT : DEBOUNCE2;                    // Advance after all options are deselected
-            DEBOUNCE2:      next <= (debounced == 26'b0) ? PLAYER_TURN : DEBOUNCE2;         // Ensures no inputs are accidentally read
+            DEBOUNCE2:      next <= (|debounced == 1'b0) ? PLAYER_TURN : DEBOUNCE2;         // Ensures no inputs are accidentally read
             FAIL_ON:        next <= FAIL_ON_WAIT;
             FAIL_ON_WAIT:   next <= sigs.pulse ? FAIL_OFF : FAIL_ON_WAIT;
             FAIL_OFF:       next <= &fail_counter ? END : FAIL_OFF_WAIT;                    // Repeat until the incorrect colour is flashed thrice
@@ -94,35 +94,43 @@ module fsm (input clk, reset, fsm_sig.fsm sigs, input [1:0] launch_keys, input [
 
     always_ff @(posedge clk) // Round and fail counters, with blocking assignments
     case(current)
-        READY1: begin
-            fail_counter = '0;
-            current_round_ff = '0;
-            sigs.check_round = '0;
-            sigs.speed = '0;
-            debounced = '0;
-            read = '0;
+        READY1:
+        begin
+            fail_counter <= '0;
+            current_round_ff <= '0;
+            sigs.check_round <= '0;
+            sigs.speed <= '0;
+            debounced <= '0;
+            read <= '0;
         end
-        ADD_CLR: begin
+        ADD_CLR:
+        begin
             current_round_ff = current_round_ff + 1'b1;
             sigs.check_round = current_round_ff; 
         end
         INC_SPEED: sigs.speed = sigs.speed + 1'b1;
         PULSE_OFF: sigs.check_round = sigs.check_round - 1'b1;
         PREP: sigs.check_round = current_round_ff; // Reset check to current round
-        PLAYER_TURN: read = '0;
-        GET_INPUT: debounced = 26'd19_999_999; // 400ms debounce
-        DEBOUNCE1: debounced = (debounced == 26'b0) ? '0 : debounced - 1'b1;
-        NEXT_SEG: sigs.check_round = sigs.check_round - 1'b1; // Check next item
-        DESELECT: begin
-            read = '1;
+        PLAYER_TURN: 
+        begin
+            debounced = 26'd19_999_999; // 400ms debounce
+            read <= '0;
+        end
+        DEBOUNCE1: debounced <= debounced - 1'b1;
+        NEXT_SEG: sigs.check_round <= sigs.check_round - 1'b1; // Check next item
+        DESELECT:
+        begin
             debounced = 26'd19_999_999; // 400ms debounce 
+            read <= '1;
         end
-        DEBOUNCE2: debounced = (debounced == 26'b0) ? '0 : debounced - 1'b1;
-        FAIL_ON: begin
-            if(fail_counter==2'b0) current_round_ff = current_round_ff - 1'b1; // Set to final round passed
-            fail_counter = fail_counter + 1'b1; // Increases for each flash
+        DEBOUNCE2: debounced <= debounced - 1'b1;
+        FAIL_ON:
+        begin
+            if(fail_counter==2'b0) current_round_ff <= current_round_ff - 1'b1; // Set to final round passed
+            fail_counter <= fail_counter + 1'b1; // Increases for each flash
         end
-        default: begin
+        default:
+        begin
             fail_counter <= fail_counter;
             sigs.speed <= sigs.speed;
             sigs.check_round <= sigs.check_round;

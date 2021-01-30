@@ -33,9 +33,6 @@ module segments_array_tb;
     initial // Start clock, load signals
     begin
         $readmemb("testbenches/segments_array/inputs.txt", inputs);
-        for(i = 0; i<33;i++);
-            segment[i] = inputs[i%4];
-        
         new_colour = '0;
         sigs.load_colour = '0;
         

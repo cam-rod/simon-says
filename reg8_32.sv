@@ -27,14 +27,13 @@ module reg8_32(fsm_sig.reg8 sigs, input clk, reset, output logic [31:0] seed);
 		if(reset | sigs.rst_seedgen)
 		begin
 			seed_basis <= '0;
-			seed_inv <= '0;
 		end
 		else
 		begin
-			seed_basis <= (&seed_basis) ? 8'b0 : seed_basis + 8'b1;
-			seed_inv <= (|seed_inv) ? '1 : seed_inv - 8'b1; // Quartus Prime does not support streaming operators
+			seed_basis <= (&seed_basis) ? '0 : seed_basis + 8'b1;
 		end
 	// Contstruct remainder of 32-bits
+	assign seed_inv = seed_basis ^ 8'hFF;
 	assign seed = {seed_inv, seed_basis, seed_inv, seed_basis};
 endmodule
 `endif // _reg8_32_sv
